@@ -13,9 +13,19 @@ Reference baselines (prior session, 5-fold seed 42 LGBM): numeric+cats RMSE 9.18
 > `python scripts/run_all.py --force` (or delete the affected rows from results.csv),
 > then re-blend. CVs below are therefore lower bounds for those configs.
 
-## CV ↔ LB mapping
-(to be filled after first leaderboard results: compare LB MSE vs cv_mse and vs
-rmse_year_2024plus² — whichever tracks better drives remaining decisions)
+## CV ↔ LB mapping (filled 2026-06-11, first 3 submissions)
+
+| sub | cv_mse | rmse_2024+² | LB MSE | LB − cv_mse |
+|---|---|---|---|---|
+| exp001 | 85.05 | 105.46 | 93.28 | +8.2 |
+| exp005 | 76.25 | 95.10 | 86.04 | +9.8 |
+| blend | 74.93 | 93.27 | 84.74 | +9.8 |
+
+- **Ranking fully preserved; deltas transfer ~1:1** (blend−exp005: −1.33 CV vs −1.30 LB).
+- `cv_mse` + ~9–10 offset is the best LB predictor; `rmse_year_2024plus²` systematically
+  OVER-estimates LB (predicted 93.3 for blend, actual 84.7) — use it only as a drift check.
+- **Decision: trust cv_mse for all remaining decisions.** The constant offset comes from the
+  test set's late-year skew and doesn't affect choices.
 
 ### exp001 — Baseline LGBM: raw numerics + native cats, no FE (submission anchor)
 - CV MSE **85.0537** | RMSE 9.2225 (±0.2140) | 2024+ RMSE 10.2696 | y<100 RMSE 9.3013 | 44 features
