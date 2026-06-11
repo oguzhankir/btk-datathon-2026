@@ -106,7 +106,7 @@ class GenericOptunaSearch:
         """Run/resume the study; persist best params to artifacts/params_{name}.json."""
         import optuna
 
-        optuna.logging.set_verbosity(optuna.logging.WARNING)
+        optuna.logging.set_verbosity(optuna.logging.WARNING)  # our callback logs instead
         ARTIFACTS.mkdir(parents=True, exist_ok=True)
         storage = f"sqlite:///{ARTIFACTS / f'optuna_{self.study_name}.db'}"
         study = optuna.create_study(
@@ -117,7 +117,21 @@ class GenericOptunaSearch:
             pruner=optuna.pruners.MedianPruner(n_warmup_steps=2),
             load_if_exists=True,
         )
-        study.optimize(self._objective, n_trials=self.n_trials, timeout=self.timeout)
+
+        def _log_trial(study, trial) -> None:
+            state = trial.state.name.lower()
+            value = f"{trial.value:.4f}" if trial.value is not None else "-"
+            try:
+                best = f"{study.best_value:.4f}"
+            except ValueError:  # no completed trial yet
+                best = "-"
+            log.info(
+                f"  trial {trial.number}/{self.n_trials}: mse={value} ({state}) "
+                f"| best so far={best}"
+            )
+
+        log.info(f"HPO start: {self.study_name}, {self.n_trials} trials (resumable: {storage})")
+        study.optimize(self._objective, n_trials=self.n_trials, timeout=self.timeout, callbacks=[_log_trial])
         log.info(f"HPO best mse={study.best_value:.4f} params={study.best_params}")
         save_json(study.best_params, ARTIFACTS / f"params_{self.study_name}.json")
         return study.best_params
