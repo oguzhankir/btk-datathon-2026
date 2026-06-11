@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project: large generated files
+data/processed/emb_*.npy
+artifacts/optuna_*.db
