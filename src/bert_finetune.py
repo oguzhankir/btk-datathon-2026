@@ -60,7 +60,9 @@ def run_bert_experiment(
 
     ids_tr_all, mask_tr_all = encode(train[TEXT_COL])
     ids_te, mask_te = encode(test[TEXT_COL])
-    y_t = torch.tensor(y, dtype=torch.float32)
+    # train on y/100: a randomly-initialized head can't climb to the 0-100 scale
+    # in 3 epochs at lr 2e-5 (verified: raw-scale training collapses to RMSE ~55)
+    y_t = torch.tensor(y / 100.0, dtype=torch.float32)
 
     oof = np.zeros(len(train))
     test_pred = np.zeros(len(test))
@@ -79,6 +81,12 @@ def run_bert_experiment(
             batch_size=batch_size, shuffle=True,
             generator=torch.Generator().manual_seed(SEED),
         )
+        total_steps = epochs * len(dl)
+        warmup = max(1, int(0.1 * total_steps))
+        sched = torch.optim.lr_scheduler.LambdaLR(
+            opt,
+            lambda s: s / warmup if s < warmup else max(0.0, (total_steps - s) / (total_steps - warmup)),
+        )
         model.train()
         for _ in range(epochs):
             for ids, mask, yb in dl:
@@ -88,6 +96,7 @@ def run_bert_experiment(
                 loss = torch.nn.functional.mse_loss(out, yb)
                 loss.backward()
                 opt.step()
+                sched.step()
 
         @torch.no_grad()
         def predict(ids_all: torch.Tensor, mask_all: torch.Tensor) -> np.ndarray:
@@ -99,7 +108,7 @@ def run_bert_experiment(
                     attention_mask=mask_all[i : i + 256].to(device),
                 ).logits.squeeze(-1)
                 preds.append(out.cpu().numpy())
-            return np.concatenate(preds)
+            return np.concatenate(preds) * 100.0  # back to target scale
 
         oof[va] = predict(ids_tr_all[va], mask_tr_all[va])
         test_pred += predict(ids_te, mask_te) / N_FOLDS
