@@ -132,3 +132,7 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
 - Only LGBM was Optuna-tuned (exp010). CatBoost/XGBoost ran with defaults. A tuned, algorithmically
   diverse CatBoost (~75 cv) could add genuine blend diversity → potential blend ~73.5 (LB ~83.0).
   Run on GPU: `./run.sh exp005 --hpo-trials 100` and `./run.sh exp006 --hpo-trials 100`, then reblend.
+
+### exp009 — BERT fine-tune Turkish (best-epoch selection, longer): regression head (GPU)
+- CV MSE **135.0721** | RMSE 11.6221 (±0.1961) | 2024+ RMSE 12.9359 | y<100 RMSE 11.7249 | 192 features
+- Notes: bert=dbmdz/bert-base-turkish-cased
