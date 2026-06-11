@@ -6,18 +6,26 @@ Predict `career_success_score` (continuous, 0–100) for 10,000 students from
 fixed 5-fold CV, leakage-safe OOF feature stacking, per-experiment artifacts and an
 append-only results log.
 
-## How to reproduce
+## How to run
+
+Everything goes through `./run.sh`; every knob (model, features, embeddings,
+HPO trials, sample weighting, seeds) lives in the experiment's `configs/<exp_id>.yaml`.
 
 ```bash
-pip install -r requirements.txt          # + torch/sentence-transformers/transformers for exp004+/009/011
-python scripts/run_all.py                # runs every config in configs/, skips completed exp_ids
-python scripts/blend.py                  # OOF-weight blend + ridge stacker over all artifacts
-python scripts/make_submission.py -e blend
+./run.sh setup          # CPU deps    (setup-gpu adds torch/sentence-transformers/transformers)
+./run.sh exp005         # run ONE experiment — no need for run_all
+./run.sh exp010 --hpo-trials 200   # CLI overrides the config's hpo.trials
+./run.sh all [--force]  # every config, skipping exp_ids already in results.csv
+./run.sh blend          # OOF blend + ridge stacker (or: ./run.sh blend exp005 exp007)
+./run.sh submit exp005  # write submissions/sub_exp005.csv + sanity report
+./run.sh eda            # regenerate reports/figures/
+./run.sh adv            # adversarial validation
 ```
 
-Single experiment: `python scripts/run_experiment.py -c configs/exp005.yaml`
-(add `--hpo-trials 200` for Optuna tuning). Diagnostics:
-`python scripts/adversarial_validation.py`, `python reports/eda/deep_eda.py`.
+Per-config knobs: `model`, `model_params` (inline overrides), `model_params_file`
+(e.g. Optuna output), `features:` (tabular_fe / text_classic / ridge_meta /
+target_encoding / embeddings {model, svd, knn, raw} / extra_oof_features),
+`sample_weighting`, `n_seeds`, `hpo: {trials, timeout}`, and for exp009 `bert: {...}`.
 
 ## Key findings
 

@@ -12,3 +12,5 @@ features:
 target_transform: none
 sample_weighting: none
 n_seeds: 3
+model_params: {}                   # inline param overrides (merged over model_params_file)
+hpo: { trials: 200, timeout: null }  # kitchen sink is Optuna-tuned by default; --hpo-trials 0 to skip

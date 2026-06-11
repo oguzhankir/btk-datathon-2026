@@ -11,3 +11,5 @@ features:
 target_transform: none
 sample_weighting: year_ratio
 n_seeds: 1
+model_params: {}                   # inline param overrides (merged over model_params_file)
+hpo: { trials: 0, timeout: null }  # trials > 0 -> Optuna-tune first (CLI --hpo-trials overrides)

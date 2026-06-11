@@ -70,3 +70,4 @@ rmse_year_2024plus² — whichever tracks better drives remaining decisions)
 - exp004 (embeddings SVD64 + kNN target), exp009 (BERT fine-tune — likely strongest single
   component since text verbalizes the score), exp010 (kitchen sink + Optuna `--hpo-trials 200`),
   re-runs of exp005–008/011 with embeddings, then re-blend.
+

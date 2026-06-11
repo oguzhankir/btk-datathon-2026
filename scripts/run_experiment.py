@@ -43,8 +43,10 @@ def year_ratio_weights(train_years: np.ndarray, test_years: np.ndarray) -> np.nd
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("-c", "--config", required=True)
-    ap.add_argument("--hpo-trials", type=int, default=0)
-    ap.add_argument("--hpo-timeout", type=int, default=None)
+    ap.add_argument("--hpo-trials", type=int, default=None,
+                    help="override config hpo.trials (0 disables HPO)")
+    ap.add_argument("--hpo-timeout", type=int, default=None,
+                    help="override config hpo.timeout (seconds)")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
@@ -80,15 +82,19 @@ def main() -> None:
                 log.warning(f"model_params_file {pf} not found — using default params")
                 notes.append(f"params file {pf.name} missing, used defaults")
 
-        if args.hpo_trials > 0:
+        hpo_cfg = cfg.get("hpo") or {}
+        hpo_trials = args.hpo_trials if args.hpo_trials is not None else int(hpo_cfg.get("trials", 0))
+        hpo_timeout = args.hpo_timeout if args.hpo_timeout is not None else hpo_cfg.get("timeout")
+        if hpo_trials > 0:
             from src.hpo import GenericOptunaSearch
 
             best = GenericOptunaSearch(
                 cfg["model"], X_tr, y, folds,
-                n_trials=args.hpo_trials, timeout=args.hpo_timeout,
+                n_trials=hpo_trials, timeout=hpo_timeout,
                 device=device, study_name=f"{cfg['model']}_{exp_id}",
             ).run()
             params = {**params, **best}
+            notes.append(f"hpo: {hpo_trials} trials")
 
         if cfg.get("model") == "two_stage":
             from src.two_stage import run_two_stage
