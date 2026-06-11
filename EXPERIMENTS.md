@@ -136,3 +136,16 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
 ### exp009 — BERT fine-tune Turkish (best-epoch selection, longer): regression head (GPU)
 - CV MSE **135.0721** | RMSE 11.6221 (±0.1961) | 2024+ RMSE 12.9359 | y<100 RMSE 11.7249 | 192 features
 - Notes: bert=dbmdz/bert-base-turkish-cased
+- Improved over the first fix (142.07 → 135.07) via inner-val best-epoch selection + 8 epochs + max_len 192.
+  Standalone "weak" (CV ~135) but fully decorrelated from the GBMs → punches above its weight in the blend.
+
+## CV ↔ LB update (5th submission)
+| sub | cv_mse | LB MSE | offset |
+|---|---|---|---|
+| blend (v3: +exp009 improved) | 74.15 | 83.74 | +9.6 |
+
+- **No real gain today**: CV 74.17→74.15 but LB 83.62→83.74 (slightly worse, within noise). The tiny CV
+  improvement did not transfer — both blends are statistically the same on LB (~83.6–83.7).
+- Confirms the residual-analysis conclusion: the tabular/text-meta frontier is saturated. The next genuine
+  jump must come from stronger, decorrelated text models (exp012 XLM-R-large, exp013 kitchen-sink v2).
+- See `docs/progress/2026-06-11.md` for the full day-1 narrative (data exploration → decisions → results).
