@@ -1,0 +1,16 @@
+exp_id: exp013
+description: "Kitchen sink v2: exp004 features + exp009 & exp012 text OOFs, Optuna-tuned LGBM"
+model: lgbm
+model_params_file: null
+features:
+  tabular_fe: true
+  target_encoding: true
+  text_classic: true
+  ridge_meta: true
+  embeddings: { model: intfloat/multilingual-e5-large, svd: 64, knn: [5, 25] }
+  extra_oof_features: { bert_pred: exp009, xlmr_pred: exp012 }
+target_transform: none
+sample_weighting: none
+n_seeds: 3
+model_params: {}
+hpo: { trials: 100, timeout: null }

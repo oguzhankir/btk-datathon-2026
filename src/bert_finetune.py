@@ -43,13 +43,15 @@ def run_bert_experiment(
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     p = cfg.get("bert", {})
+    model_name = p.get("model", MODEL_NAME)
     epochs = int(p.get("epochs", 3))
     lr = float(p.get("lr", 2e-5))
     max_len = int(p.get("max_len", 128))
     batch_size = int(p.get("batch_size", 32))
+    inner_val_frac = float(p.get("inner_val_frac", 0.1))  # held-out slice for best-epoch selection
 
     torch.manual_seed(SEED)
-    tok = AutoTokenizer.from_pretrained(MODEL_NAME)
+    tok = AutoTokenizer.from_pretrained(model_name)
 
     def encode(texts: pd.Series) -> tuple[torch.Tensor, torch.Tensor]:
         enc = tok(
@@ -69,11 +71,17 @@ def run_bert_experiment(
     fold_rmses: list[float] = []
     t0 = time.time()
 
+    rng = np.random.default_rng(SEED)
     for fold in range(N_FOLDS):
-        tr = np.where(folds != fold)[0]
+        tr_all = np.where(folds != fold)[0]
         va = np.where(folds == fold)[0]
+        # inner split of the training fold for best-epoch selection (no val-fold leakage)
+        perm = rng.permutation(tr_all)
+        n_inner = max(1, int(inner_val_frac * len(perm)))
+        iv, tr = perm[:n_inner], perm[n_inner:]
+
         model = AutoModelForSequenceClassification.from_pretrained(
-            MODEL_NAME, num_labels=1, problem_type="regression"
+            model_name, num_labels=1, problem_type="regression"
         ).to(device)
         opt = torch.optim.AdamW(model.parameters(), lr=lr)
         dl = DataLoader(
@@ -87,16 +95,6 @@ def run_bert_experiment(
             opt,
             lambda s: s / warmup if s < warmup else max(0.0, (total_steps - s) / (total_steps - warmup)),
         )
-        model.train()
-        for _ in range(epochs):
-            for ids, mask, yb in dl:
-                ids, mask, yb = ids.to(device), mask.to(device), yb.to(device)
-                opt.zero_grad()
-                out = model(input_ids=ids, attention_mask=mask).logits.squeeze(-1)
-                loss = torch.nn.functional.mse_loss(out, yb)
-                loss.backward()
-                opt.step()
-                sched.step()
 
         @torch.no_grad()
         def predict(ids_all: torch.Tensor, mask_all: torch.Tensor) -> np.ndarray:
@@ -109,6 +107,25 @@ def run_bert_experiment(
                 ).logits.squeeze(-1)
                 preds.append(out.cpu().numpy())
             return np.concatenate(preds) * 100.0  # back to target scale
+
+        best_rmse, best_state = np.inf, None
+        for ep in range(epochs):
+            model.train()
+            for ids, mask, yb in dl:
+                ids, mask, yb = ids.to(device), mask.to(device), yb.to(device)
+                opt.zero_grad()
+                out = model(input_ids=ids, attention_mask=mask).logits.squeeze(-1)
+                loss = torch.nn.functional.mse_loss(out, yb)
+                loss.backward()
+                opt.step()
+                sched.step()
+            iv_rmse = rmse(y[iv], clip_preds(predict(ids_tr_all[iv], mask_tr_all[iv])))
+            if iv_rmse < best_rmse - 1e-3:
+                best_rmse = iv_rmse
+                best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+            log.info(f"  bert fold {fold} epoch {ep}: inner_val_rmse={iv_rmse:.4f}")
+        if best_state is not None:
+            model.load_state_dict(best_state)
 
         oof[va] = predict(ids_tr_all[va], mask_tr_all[va])
         test_pred += predict(ids_te, mask_te) / N_FOLDS
@@ -133,4 +150,4 @@ def run_bert_experiment(
         "rmse_year_2024plus": rmse(y[m2024], oof[m2024]),
         "rmse_y_lt_100": rmse(y[y < 100], oof[y < 100]),
     }
-    return result, max_len, [f"bert={MODEL_NAME}"]
+    return result, max_len, [f"bert={model_name}"]
