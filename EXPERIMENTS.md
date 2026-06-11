@@ -109,3 +109,26 @@ Reference baselines (prior session, 5-fold seed 42 LGBM): numeric+cats RMSE 9.18
 ### exp010 — Kitchen sink: exp004 features + exp009 BERT OOF as feature, Optuna-tuned LGBM
 - CV MSE **75.2956** | RMSE 8.6773 (±0.1542) | 2024+ RMSE 9.7028 | y<100 RMSE 8.8501 | 178 features
 - Notes: params file params_lgbm_exp010.json missing, used defaults; hpo: 1 trials
+
+## CV ↔ LB update (4th submission)
+| sub | cv_mse | LB MSE | offset |
+|---|---|---|---|
+| blend (v2: +exp009 fixed, +exp010 tuned) | 74.17 | 83.62 | +9.45 |
+
+Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
+
+## Residual analysis of exp010 (best single, reports/eda/residual_analysis.py)
+- **No leftover linear signal**: every engineered feature correlates with the residual at |ρ|<0.05.
+  The target is NOT a simple formula we're missing → stop chasing feature interactions.
+- **No year bias** (per-year residual mean ≈ 0): the year feature already absorbs the drift →
+  year-based LB calibration won't help.
+- **Ceiling is under-predicted by design**: y=100 rows have residual bias +4.07 (model says ~96),
+  but `%pred≥95 = 8.9%` already matches `%y=100 = 7.7%`. Under MSE this is OPTIMAL given uncertainty.
+- **Tested & rejected post-processing**: fold-safe isotonic calibration (74.62, worse),
+  hard-snap-to-100 (no gain), LGBM meta-stacker (75.08, worse vs ridge 74.17),
+  ridge on 7 strong members (74.20, identical). **The blend is already MSE-optimal for this feature set.**
+
+## Remaining lever
+- Only LGBM was Optuna-tuned (exp010). CatBoost/XGBoost ran with defaults. A tuned, algorithmically
+  diverse CatBoost (~75 cv) could add genuine blend diversity → potential blend ~73.5 (LB ~83.0).
+  Run on GPU: `./run.sh exp005 --hpo-trials 100` and `./run.sh exp006 --hpo-trials 100`, then reblend.
