@@ -81,3 +81,31 @@ Reference baselines (prior session, 5-fold seed 42 LGBM): numeric+cats RMSE 9.18
   component since text verbalizes the score), exp010 (kitchen sink + Optuna `--hpo-trials 200`),
   re-runs of exp005–008/011 with embeddings, then re-blend.
 
+
+### exp004 — exp003 + e5-large embeddings (SVD64 + knn target features)
+- CV MSE **79.0141** | RMSE 8.8890 (±0.1392) | 2024+ RMSE 9.8451 | y<100 RMSE 9.0636 | 177 features
+
+### exp009 — BERT fine-tune dbmdz/bert-base-turkish-cased, regression head (GPU)
+- CV MSE **3096.9422** | RMSE 55.6502 (±0.1990) | 2024+ RMSE 55.2730 | y<100 RMSE 53.5242 | 128 features
+- Notes: bert=dbmdz/bert-base-turkish-cased
+
+### exp009 — BERT fine-tune dbmdz/bert-base-turkish-cased, regression head (GPU)
+- CV MSE **142.0657** | RMSE 11.9191 (±0.2659) | 2024+ RMSE 13.2371 | y<100 RMSE 12.0540 | 128 features
+- Notes: bert=dbmdz/bert-base-turkish-cased
+
+### exp002 — exp001 + tabular FE (NA flags, role-skill alignment, ratios, time, target encoding)
+- CV MSE **83.9734** | RMSE 9.1637 (±0.1501) | 2024+ RMSE 10.1882 | y<100 RMSE 9.2600 | 85 features
+
+### exp005 — CatBoost on exp004 feature set (native cats, GPU-capable)
+- CV MSE **76.8291** | RMSE 8.7652 (±0.1759) | 2024+ RMSE 9.7685 | y<100 RMSE 8.9407 | 177 features
+
+### exp006 — XGBoost on exp004 feature set
+- CV MSE **80.0707** | RMSE 8.9482 (±0.1640) | 2024+ RMSE 9.9426 | y<100 RMSE 9.1217 | 177 features
+
+### exp007 — Two-stage: P(y==100) classifier blended with regressor (all-rows vs y<100), tuned on OOF
+- CV MSE **78.6611** | RMSE 8.8691 (±0.1459) | 2024+ RMSE 9.8082 | y<100 RMSE 9.0816 | 177 features
+- Notes: best_combo={'regressor': 'all_rows', 'gamma': 0.75}
+
+### exp010 — Kitchen sink: exp004 features + exp009 BERT OOF as feature, Optuna-tuned LGBM
+- CV MSE **75.2956** | RMSE 8.6773 (±0.1542) | 2024+ RMSE 9.7028 | y<100 RMSE 8.8501 | 178 features
+- Notes: params file params_lgbm_exp010.json missing, used defaults; hpo: 1 trials
