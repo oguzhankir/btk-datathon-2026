@@ -30,10 +30,10 @@ def main() -> None:
         sys.exit(f"missing {test_path} — run the experiment first")
     preds = clip_preds(np.load(test_path))
 
-    train, _, sub = load_raw()
-    assert len(preds) == len(sub), f"pred length {len(preds)} != submission {len(sub)}"
-    sub = sub[[ID_COL]].copy()
-    sub[TARGET] = preds
+    # sample_submission.csv is a 2-row format stub → build ids from test_x
+    train, test, _ = load_raw()
+    assert len(preds) == len(test), f"pred length {len(preds)} != test {len(test)}"
+    sub = pd.DataFrame({ID_COL: test[ID_COL], TARGET: preds})
     SUBMISSIONS.mkdir(parents=True, exist_ok=True)
     out = SUBMISSIONS / f"sub_{exp}.csv"
     sub.to_csv(out, index=False)
