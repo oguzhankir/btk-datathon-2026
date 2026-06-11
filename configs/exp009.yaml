@@ -1,0 +1,8 @@
+exp_id: exp009
+description: "BERT fine-tune dbmdz/bert-base-turkish-cased, regression head (GPU)"
+model: bert
+bert: { epochs: 3, lr: 2.0e-5, max_len: 128, batch_size: 32 }
+allow_cpu: false
+target_transform: none
+sample_weighting: none
+n_seeds: 1

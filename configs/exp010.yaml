@@ -1,0 +1,14 @@
+exp_id: exp010
+description: "Kitchen sink: exp004 features + exp009 BERT OOF as feature, Optuna-tuned LGBM"
+model: lgbm
+model_params_file: artifacts/params_lgbm_exp010.json   # produced by --hpo-trials; remove to use defaults
+features:
+  tabular_fe: true
+  target_encoding: true
+  text_classic: true
+  ridge_meta: true
+  embeddings: { model: intfloat/multilingual-e5-large, svd: 64, knn: [5, 25] }
+  extra_oof_features: { bert_pred: exp009 }
+target_transform: none
+sample_weighting: none
+n_seeds: 3
