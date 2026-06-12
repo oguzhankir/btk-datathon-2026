@@ -40,7 +40,7 @@ def run_bert_experiment(
 
     import torch
     from torch.utils.data import DataLoader, TensorDataset
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    from transformers import AutoModel, AutoTokenizer
 
     p = cfg.get("bert", {})
     model_name = p.get("model", MODEL_NAME)
@@ -54,6 +54,22 @@ def run_bert_experiment(
 
     torch.manual_seed(seed)
     tok = AutoTokenizer.from_pretrained(model_name)
+
+    class _Regressor(torch.nn.Module):
+        """Encoder + mean-pool + linear head. Works for any HF encoder model."""
+        def __init__(self, name: str) -> None:
+            super().__init__()
+            self.enc = AutoModel.from_pretrained(name)
+            h = self.enc.config.hidden_size
+            self.head = torch.nn.Linear(h, 1)
+            torch.nn.init.normal_(self.head.weight, mean=0.0, std=0.01)
+            torch.nn.init.zeros_(self.head.bias)
+
+        def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+            out = self.enc(input_ids=input_ids, attention_mask=attention_mask)
+            m = attention_mask.unsqueeze(-1).float()
+            pooled = (out.last_hidden_state * m).sum(1) / m.sum(1).clamp(min=1e-9)
+            return self.head(pooled).squeeze(-1)
 
     def encode(texts: pd.Series) -> tuple[torch.Tensor, torch.Tensor]:
         enc = tok(
@@ -82,18 +98,7 @@ def run_bert_experiment(
         n_inner = max(1, int(inner_val_frac * len(perm)))
         iv, tr = perm[:n_inner], perm[n_inner:]
 
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_name, num_labels=1, problem_type="regression"
-        )
-        # mDeBERTa's randomly-initialized pooler/classifier can produce NaN
-        # predictions on the first pass; reset to small values for stability.
-        for name, mod in model.named_modules():
-            if any(k in name for k in ("classifier", "pooler")):
-                if hasattr(mod, "weight") and mod.weight is not None:
-                    torch.nn.init.normal_(mod.weight, mean=0.0, std=0.01)
-                if hasattr(mod, "bias") and mod.bias is not None:
-                    torch.nn.init.zeros_(mod.bias)
-        model = model.to(device)
+        model = _Regressor(model_name).to(device)
         opt = torch.optim.AdamW(model.parameters(), lr=lr)
         dl = DataLoader(
             TensorDataset(ids_tr_all[tr], mask_tr_all[tr], y_t[tr]),
@@ -115,7 +120,7 @@ def run_bert_experiment(
                 out = model(
                     input_ids=ids_all[i : i + 256].to(device),
                     attention_mask=mask_all[i : i + 256].to(device),
-                ).logits.squeeze(-1)
+                )
                 preds.append(out.cpu().numpy())
             return np.concatenate(preds) * 100.0  # back to target scale
 
@@ -125,7 +130,7 @@ def run_bert_experiment(
             for ids, mask, yb in dl:
                 ids, mask, yb = ids.to(device), mask.to(device), yb.to(device)
                 opt.zero_grad()
-                out = model(input_ids=ids, attention_mask=mask).logits.squeeze(-1)
+                out = model(input_ids=ids, attention_mask=mask)
                 loss = torch.nn.functional.mse_loss(out, yb)
                 if torch.isnan(loss):
                     opt.zero_grad()
