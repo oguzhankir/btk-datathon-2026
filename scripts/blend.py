@@ -22,13 +22,18 @@ from src.utils import ARTIFACTS, SEED, clip_preds, get_logger, seed_everything  
 
 log = get_logger()
 
+# Members whose OOF cannot be trusted (e.g. test-derived labels leak into it):
+# exp017 pseudo-labeling showed CV 72.9 but LB 83.22 — auto-discovery skips these.
+# Pass ids explicitly (`./run.sh blend exp017 ...`) only to inspect them on purpose.
+EXCLUDED = {"exp017"}
+
 
 def discover_exp_ids() -> list[str]:
-    """All exp ids with both oof_ and test_ artifacts saved."""
+    """All exp ids with both oof_ and test_ artifacts saved (minus EXCLUDED)."""
     ids = []
     for p in sorted(ARTIFACTS.glob("oof_*.npy")):
         exp = p.stem.removeprefix("oof_")
-        if exp != "blend" and (ARTIFACTS / f"test_{exp}.npy").exists():
+        if exp != "blend" and exp not in EXCLUDED and (ARTIFACTS / f"test_{exp}.npy").exists():
             ids.append(exp)
     return ids
 
