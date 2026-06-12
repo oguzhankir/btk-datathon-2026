@@ -195,3 +195,11 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
   structurally different. Remaining levers: exp018 (mDeBERTa diversity), exp019 (CatBoost on the
   strongest feature set — algorithmic diversity where it matters). After those, protect rank and
   polish the final-solution notebook.
+
+## Residual-GBM test (2026-06-12, reports/eda/residual_analysis.py)
+Question: how do we KNOW tabular FE is exhausted, beyond linear correlations?
+Answer: trained a fold-safe LGBM to predict the best model's residual from all 85 tabular
+features (nonlinear, searches interactions itself). Result: **OOF R² = ±0.0005** for both
+exp010 and the blend → recoverable MSE ≈ ±0.03 = pure noise. This upgrades "we think the
+tabular frontier is closed" to a measurement: nothing derivable from the tabular columns
+explains the remaining error. What's left = generator noise + the part only the text reflects.

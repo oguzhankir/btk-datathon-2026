@@ -55,6 +55,32 @@ def main() -> None:
         m = q == d
         print(f"  decile {d}: pred~{oof[m].mean():6.2f}  rmse={np.sqrt((res[m]**2).mean()):.3f}")
 
+    # decisive test: can a NONLINEAR model (full interaction search) predict the
+    # residual from the tabular features at all? Linear correlations above only
+    # rule out linear leftovers; a fold-safe residual-GBM rules out everything a
+    # tree ensemble can represent. Verified 2026-06-12: R² ≈ ±0.0005 for both
+    # exp010 and the blend → recoverable tabular MSE ≈ ±0.03 (pure noise).
+    import lightgbm as lgb
+
+    Xg = X[feats].copy()
+    for c in Xg.columns:
+        if Xg[c].dtype.kind not in "ifu":
+            Xg[c] = Xg[c].astype("category")
+    folds = fold_array(train)
+    pred = np.zeros(len(res))
+    for f in sorted(np.unique(folds)):
+        tr, va = np.where(folds != f)[0], np.where(folds == f)[0]
+        m = lgb.LGBMRegressor(n_estimators=2000, learning_rate=0.03, num_leaves=63,
+                              random_state=42, verbosity=-1)
+        m.fit(Xg.iloc[tr], res[tr], eval_set=[(Xg.iloc[va], res[va])],
+              callbacks=[lgb.early_stopping(100, verbose=False)])
+        pred[va] = m.predict(Xg.iloc[va])
+    base, mod = np.mean(res**2), np.mean((res - pred) ** 2)
+    print(f"\nresidual-GBM test (nonlinear leftover-signal search):")
+    print(f"  residual var={base:.4f} | residual-GBM oof mse={mod:.4f} "
+          f"| R²={1 - mod / base:+.4f} | recoverable MSE={base - mod:+.4f}")
+    print("  ≈0 → no measurable tabular signal remains; the residual is target noise + text-only signal.")
+
 
 if __name__ == "__main__":
     main()
