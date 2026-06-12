@@ -211,3 +211,11 @@ explains the remaining error. What's left = generator noise + the part only the 
 ### exp019 — CatBoost on kitchen-sink v3 features (incl. 4 text OOFs) — algorithmic diversity at the strongest feature set
 - CV MSE **75.2845** | RMSE 8.6767 (±0.1939) | 2024+ RMSE 9.6614 | y<100 RMSE 8.8569 | 181 features
 - Notes: hpo: 30 trials
+
+### exp020 — Text v2 recipe: Turkish BERT + attention pooling + multi-sample dropout + LLRD + cosine (8 epochs)
+- CV MSE **134.9180** | RMSE 11.6154 (±0.2105) | 2024+ RMSE 12.7741 | y<100 RMSE 11.6966 | 128 features
+- Notes: bert_v2=dbmdz/bert-base-turkish-cased; llrd=0.9; msd=5x0.3
+
+### exp021 — Text v2 recipe on xlm-roberta-base (same recipe as exp020, different backbone for blend diversity)
+- CV MSE **136.8572** | RMSE 11.6986 (±0.3321) | 2024+ RMSE 12.9155 | y<100 RMSE 11.8442 | 128 features
+- Notes: bert_v2=FacebookAI/xlm-roberta-base; llrd=0.9; msd=5x0.3
