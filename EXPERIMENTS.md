@@ -136,3 +136,14 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
 ### exp009 — BERT fine-tune Turkish (best-epoch selection, longer): regression head (GPU)
 - CV MSE **135.0721** | RMSE 11.6221 (±0.1961) | 2024+ RMSE 12.9359 | y<100 RMSE 11.7249 | 192 features
 - Notes: bert=dbmdz/bert-base-turkish-cased
+
+### exp012 — Stronger text model: XLM-RoBERTa-large fine-tune, regression head (GPU)
+- CV MSE **131.1589** | RMSE 11.4525 (±0.3094) | 2024+ RMSE 12.6988 | y<100 RMSE 11.5606 | 192 features
+- Notes: bert=FacebookAI/xlm-roberta-large
+
+### exp013 — Kitchen sink v2: exp004 features + exp009 & exp012 text OOFs, Optuna-tuned LGBM
+- CV MSE **75.1432** | RMSE 8.6685 (±0.1707) | 2024+ RMSE 9.6680 | y<100 RMSE 8.8448 | 179 features
+- Notes: hpo: 100 trials
+
+### exp011 — Torch MLP on tabular (standardized, imputed + NA flags) + raw embeddings (blend diversity)
+- CV MSE **102.9448** | RMSE 10.1462 (±0.2646) | 2024+ RMSE 11.2612 | y<100 RMSE 10.2569 | 1137 features
