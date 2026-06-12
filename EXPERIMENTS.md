@@ -203,3 +203,11 @@ features (nonlinear, searches interactions itself). Result: **OOF R² = ±0.0005
 exp010 and the blend → recoverable MSE ≈ ±0.03 = pure noise. This upgrades "we think the
 tabular frontier is closed" to a measurement: nothing derivable from the tabular columns
 explains the remaining error. What's left = generator noise + the part only the text reflects.
+
+### exp018 — Text diversity: xlm-roberta-base fine-tune (lighter than large, different capacity)
+- CV MSE **132.3995** | RMSE 11.5065 (±0.2725) | 2024+ RMSE 12.8380 | y<100 RMSE 11.6461 | 128 features
+- Notes: bert=FacebookAI/xlm-roberta-base
+
+### exp019 — CatBoost on kitchen-sink v3 features (incl. 4 text OOFs) — algorithmic diversity at the strongest feature set
+- CV MSE **75.2845** | RMSE 8.6767 (±0.1939) | 2024+ RMSE 9.6614 | y<100 RMSE 8.8569 | 181 features
+- Notes: hpo: 30 trials
