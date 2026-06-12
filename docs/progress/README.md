@@ -11,3 +11,4 @@ Teknik deney-deney kayıt için `EXPERIMENTS.md` (kök dizin), sayısal log içi
 | Tarih | Rapor | Özet |
 |---|---|---|
 | 2026-06-11 | [2026-06-11.md](2026-06-11.md) | Gün 1: pipeline kuruldu, exp001–011 + blend; en iyi LB ~83.6. Tabular frontier kapandı (residual analizi); BERT düzeltildi. Gece exp012/exp013 koşuyor. |
+| 2026-06-12 | [2026-06-12.md](2026-06-12.md) | Gün 2: text push tuttu → **LB 83.17** (yeni en iyi). Multi-seed ve pseudo-labeling reddedildi; basit-leak denetimi temiz. Akşam: exp018 mDeBERTa + exp019 CatBoost@ks-v3. |

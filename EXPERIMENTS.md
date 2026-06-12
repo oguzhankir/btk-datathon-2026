@@ -176,3 +176,22 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
 ### exp017 — Pseudo-labeling (blend test preds, weight=1.0)
 - CV MSE **72.9060** | RMSE 8.5385 | 2024+ RMSE 9.4805
 - OOF mildly optimistic (pseudo-labels see all folds); decide on LB.
+
+## CV ↔ LB update (day 2, submissions 6–8) — PLATEAU
+
+| sub | cv_mse | LB MSE | offset | verdict |
+|---|---|---|---|---|
+| blend v4 (+exp012 XLM-R, +exp013 ks-v2) | 73.89 | **83.1677** | +9.28 | ✅ new best — text models transfer EXTRA well |
+| blend v5 (+exp014/015/016 multi-seed) | 73.76 | 83.1768 | +9.42 | ➖ no transfer; multi-seed averaging = noise |
+| blend v6 (+exp017 pseudo, 81% weight) | 72.68* | 83.2240 | — | ❌ *inflated CV; pseudo-label OOF optimism confirmed on LB |
+
+- **exp017 pseudo-labeling REJECTED**: its OOF (72.91) is optimistic by construction (pseudo-labels
+  derive from full-train fold averages, leaking each validation fold). LB settles it: 83.22 > 83.17.
+  → exclude exp017 from future blends; don't trust any CV where test-derived labels enter training.
+- **Text ceiling confirmed**: BERT(2 seeds), XLM-R-large(2 seeds), kitchen-sinks v2/v3 all land within
+  ±0.05 LB of each other. Day-2 simple-leak audit (digits in text, train–test row/text duplicates,
+  discrete-target rounding, per-year ceiling calibration) found NOTHING — there is no cheap trick.
+- Gap to top-5: 83.17 vs 82.23 = 0.94 MSE = RMSE 9.12 vs 9.07. Leaders are marginally better, not
+  structurally different. Remaining levers: exp018 (mDeBERTa diversity), exp019 (CatBoost on the
+  strongest feature set — algorithmic diversity where it matters). After those, protect rank and
+  polish the final-solution notebook.
