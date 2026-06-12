@@ -14,7 +14,9 @@ matplotlib==3.10.9
 shap==0.51.0
 
 # Text/GPU extras (needed for embeddings: exp004+; BERT: exp009; MLP: exp011)
-# pip install torch sentence-transformers transformers
+# pip install torch sentence-transformers transformers sentencepiece protobuf
 # torch>=2.4
 # sentence-transformers>=3.0
 # transformers>=4.44
+# sentencepiece>=0.2.0   (required for mDeBERTa, XLM-R tokenizers)
+# protobuf>=3.20         (required for sentencepiece on transformers>=4.44)
