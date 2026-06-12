@@ -136,6 +136,17 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
 ### exp009 — BERT fine-tune Turkish (best-epoch selection, longer): regression head (GPU)
 - CV MSE **135.0721** | RMSE 11.6221 (±0.1961) | 2024+ RMSE 12.9359 | y<100 RMSE 11.7249 | 192 features
 - Notes: bert=dbmdz/bert-base-turkish-cased
+
+### exp012 — Stronger text model: XLM-RoBERTa-large fine-tune, regression head (GPU)
+- CV MSE **131.1589** | RMSE 11.4525 (±0.3094) | 2024+ RMSE 12.6988 | y<100 RMSE 11.5606 | 192 features
+- Notes: bert=FacebookAI/xlm-roberta-large
+
+### exp013 — Kitchen sink v2: exp004 features + exp009 & exp012 text OOFs, Optuna-tuned LGBM
+- CV MSE **75.1432** | RMSE 8.6685 (±0.1707) | 2024+ RMSE 9.6680 | y<100 RMSE 8.8448 | 179 features
+- Notes: hpo: 100 trials
+
+### exp011 — Torch MLP on tabular (standardized, imputed + NA flags) + raw embeddings (blend diversity)
+- CV MSE **102.9448** | RMSE 10.1462 (±0.2646) | 2024+ RMSE 11.2612 | y<100 RMSE 10.2569 | 1137 features
 - Improved over the first fix (142.07 → 135.07) via inner-val best-epoch selection + 8 epochs + max_len 192.
   Standalone "weak" (CV ~135) but fully decorrelated from the GBMs → punches above its weight in the blend.
 
@@ -149,3 +160,15 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
 - Confirms the residual-analysis conclusion: the tabular/text-meta frontier is saturated. The next genuine
   jump must come from stronger, decorrelated text models (exp012 XLM-R-large, exp013 kitchen-sink v2).
 - See `docs/progress/2026-06-11.md` for the full day-1 narrative (data exploration → decisions → results).
+
+### exp014 — Multi-seed text: BERT Turkish fine-tune, seed 1337 (avg with exp009 in blend)
+- CV MSE **139.8415** | RMSE 11.8255 (±0.3696) | 2024+ RMSE 13.2003 | y<100 RMSE 12.0032 | 192 features
+- Notes: bert=dbmdz/bert-base-turkish-cased
+
+### exp015 — Multi-seed text: XLM-RoBERTa-large fine-tune, seed 1337 (avg with exp012 in blend)
+- CV MSE **134.6902** | RMSE 11.6056 (±0.1930) | 2024+ RMSE 12.8827 | y<100 RMSE 11.8283 | 192 features
+- Notes: bert=FacebookAI/xlm-roberta-large
+
+### exp016 — Kitchen sink v3: exp004 features + 4 multi-seed text OOFs (BERT x2, XLM-R x2), Optuna-tuned LGBM
+- CV MSE **75.2753** | RMSE 8.6761 (±0.1741) | 2024+ RMSE 9.6826 | y<100 RMSE 8.8549 | 181 features
+- Notes: hpo: 100 trials
