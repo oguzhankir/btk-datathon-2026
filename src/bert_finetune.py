@@ -48,6 +48,7 @@ def run_bert_experiment(
     lr = float(p.get("lr", 2e-5))
     max_len = int(p.get("max_len", 128))
     batch_size = int(p.get("batch_size", 32))
+    max_grad_norm = float(p.get("max_grad_norm", 1.0))
     inner_val_frac = float(p.get("inner_val_frac", 0.1))  # held-out slice for best-epoch selection
     seed = int(p.get("seed", SEED))  # vary per config for multi-seed averaging in the blend
 
@@ -118,6 +119,7 @@ def run_bert_experiment(
                 out = model(input_ids=ids, attention_mask=mask).logits.squeeze(-1)
                 loss = torch.nn.functional.mse_loss(out, yb)
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
                 opt.step()
                 sched.step()
             iv_rmse = rmse(y[iv], clip_preds(predict(ids_tr_all[iv], mask_tr_all[iv])))
