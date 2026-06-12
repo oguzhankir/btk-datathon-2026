@@ -14,6 +14,7 @@
 #   ./run.sh submit exp005          # write submissions/sub_exp005.csv + sanity report
 #   ./run.sh eda                    # regenerate reports/figures/
 #   ./run.sh adv                    # adversarial validation
+#   ./run.sh pseudo                 # exp017: pseudo-label test rows, retrain (uses blend preds)
 #
 # Note: running an experiment again overwrites its artifacts and appends a new
 # row to results.csv (the latest row per exp_id is the one that counts).
@@ -36,6 +37,7 @@ case "$cmd" in
   submit)    python scripts/make_submission.py -e "${1:?usage: ./run.sh submit <exp_id|blend>}" ;;
   eda)       python reports/eda/deep_eda.py ;;
   adv)       python scripts/adversarial_validation.py ;;
+  pseudo)    python scripts/pseudo_label.py "$@" ;;
   *)
     cfg="configs/$cmd.yaml"
     [ -f "$cfg" ] || { echo "unknown command or config: $cmd ($cfg not found)"; echo; usage; exit 1; }
