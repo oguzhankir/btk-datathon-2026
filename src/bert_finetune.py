@@ -49,8 +49,9 @@ def run_bert_experiment(
     max_len = int(p.get("max_len", 128))
     batch_size = int(p.get("batch_size", 32))
     inner_val_frac = float(p.get("inner_val_frac", 0.1))  # held-out slice for best-epoch selection
+    seed = int(p.get("seed", SEED))  # vary per config for multi-seed averaging in the blend
 
-    torch.manual_seed(SEED)
+    torch.manual_seed(seed)
     tok = AutoTokenizer.from_pretrained(model_name)
 
     def encode(texts: pd.Series) -> tuple[torch.Tensor, torch.Tensor]:
@@ -71,7 +72,7 @@ def run_bert_experiment(
     fold_rmses: list[float] = []
     t0 = time.time()
 
-    rng = np.random.default_rng(SEED)
+    rng = np.random.default_rng(seed)
     for fold in range(N_FOLDS):
         tr_all = np.where(folds != fold)[0]
         va = np.where(folds == fold)[0]
@@ -87,7 +88,7 @@ def run_bert_experiment(
         dl = DataLoader(
             TensorDataset(ids_tr_all[tr], mask_tr_all[tr], y_t[tr]),
             batch_size=batch_size, shuffle=True,
-            generator=torch.Generator().manual_seed(SEED),
+            generator=torch.Generator().manual_seed(seed),
         )
         total_steps = epochs * len(dl)
         warmup = max(1, int(0.1 * total_steps))
