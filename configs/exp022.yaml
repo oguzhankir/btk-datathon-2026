@@ -1,0 +1,16 @@
+exp_id: exp022
+description: "XGBoost on kitchen-sink v3 features (incl. 4 text OOFs) — second new algorithm at the strongest feature set"
+model: xgb
+model_params_file: null
+features:
+  tabular_fe: true
+  target_encoding: true
+  text_classic: true
+  ridge_meta: true
+  embeddings: { model: intfloat/multilingual-e5-large, svd: 64, knn: [5, 25] }
+  extra_oof_features: { bert_pred: exp009, bert_pred2: exp014, xlmr_pred: exp012, xlmr_pred2: exp015 }
+target_transform: none
+sample_weighting: none
+n_seeds: 3
+model_params: {}
+hpo: { trials: 20, timeout: 1500 }   # XGB on GPU is fast; 20 trials / 25 min cap
