@@ -160,3 +160,15 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
 - Confirms the residual-analysis conclusion: the tabular/text-meta frontier is saturated. The next genuine
   jump must come from stronger, decorrelated text models (exp012 XLM-R-large, exp013 kitchen-sink v2).
 - See `docs/progress/2026-06-11.md` for the full day-1 narrative (data exploration → decisions → results).
+
+### exp014 — Multi-seed text: BERT Turkish fine-tune, seed 1337 (avg with exp009 in blend)
+- CV MSE **139.8415** | RMSE 11.8255 (±0.3696) | 2024+ RMSE 13.2003 | y<100 RMSE 12.0032 | 192 features
+- Notes: bert=dbmdz/bert-base-turkish-cased
+
+### exp015 — Multi-seed text: XLM-RoBERTa-large fine-tune, seed 1337 (avg with exp012 in blend)
+- CV MSE **134.6902** | RMSE 11.6056 (±0.1930) | 2024+ RMSE 12.8827 | y<100 RMSE 11.8283 | 192 features
+- Notes: bert=FacebookAI/xlm-roberta-large
+
+### exp016 — Kitchen sink v3: exp004 features + 4 multi-seed text OOFs (BERT x2, XLM-R x2), Optuna-tuned LGBM
+- CV MSE **75.2753** | RMSE 8.6761 (±0.1741) | 2024+ RMSE 9.6826 | y<100 RMSE 8.8549 | 181 features
+- Notes: hpo: 100 trials
