@@ -172,3 +172,7 @@ Offset stays ~+9.5; cv_mse remains the reliable LB predictor.
 ### exp016 — Kitchen sink v3: exp004 features + 4 multi-seed text OOFs (BERT x2, XLM-R x2), Optuna-tuned LGBM
 - CV MSE **75.2753** | RMSE 8.6761 (±0.1741) | 2024+ RMSE 9.6826 | y<100 RMSE 8.8549 | 181 features
 - Notes: hpo: 100 trials
+
+### exp017 — Pseudo-labeling (blend test preds, weight=1.0)
+- CV MSE **72.9060** | RMSE 8.5385 | 2024+ RMSE 9.4805
+- OOF mildly optimistic (pseudo-labels see all folds); decide on LB.
