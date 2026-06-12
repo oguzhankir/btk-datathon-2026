@@ -84,7 +84,16 @@ def run_bert_experiment(
 
         model = AutoModelForSequenceClassification.from_pretrained(
             model_name, num_labels=1, problem_type="regression"
-        ).to(device)
+        )
+        # mDeBERTa's randomly-initialized pooler/classifier can produce NaN
+        # predictions on the first pass; reset to small values for stability.
+        for name, mod in model.named_modules():
+            if any(k in name for k in ("classifier", "pooler")):
+                if hasattr(mod, "weight") and mod.weight is not None:
+                    torch.nn.init.normal_(mod.weight, mean=0.0, std=0.01)
+                if hasattr(mod, "bias") and mod.bias is not None:
+                    torch.nn.init.zeros_(mod.bias)
+        model = model.to(device)
         opt = torch.optim.AdamW(model.parameters(), lr=lr)
         dl = DataLoader(
             TensorDataset(ids_tr_all[tr], mask_tr_all[tr], y_t[tr]),
@@ -118,6 +127,9 @@ def run_bert_experiment(
                 opt.zero_grad()
                 out = model(input_ids=ids, attention_mask=mask).logits.squeeze(-1)
                 loss = torch.nn.functional.mse_loss(out, yb)
+                if torch.isnan(loss):
+                    opt.zero_grad()
+                    continue
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
                 opt.step()
