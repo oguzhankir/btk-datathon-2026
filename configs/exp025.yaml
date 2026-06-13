@@ -1,0 +1,16 @@
+exp_id: exp025
+description: "1D-CNN on tabular features (Kaggle TPS diversity booster; new model family for the blend)"
+model: cnn1d
+cnn:
+  embed_dim: 8
+  channels: [32, 64]
+  epochs: 60
+  lr: 1.0e-3
+  dropout: 0.1
+  batch_size: 256
+allow_cpu: true          # 10k rows; runs on CPU in minutes, GPU faster
+target_transform: none
+sample_weighting: none
+n_seeds: 3               # seed-average to stabilize the NN's OOF
+model_params: {}
+hpo: { trials: 0, timeout: null }
