@@ -72,6 +72,10 @@ def main() -> None:
         from src.llm_finetune import run_llm_experiment
 
         result, n_features, notes = run_llm_experiment(train, test, y, folds, years, cfg, device)
+    elif cfg.get("model") == "dae":
+        from src.dae import run_dae_experiment
+
+        result, n_features, notes = run_dae_experiment(train, test, y, folds, years, cfg, device)
     else:
         X_tr, X_te, notes = build_features(cfg.get("features", {}), train, test, y, folds)
         n_features = X_tr.shape[1]

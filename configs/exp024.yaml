@@ -1,0 +1,19 @@
+exp_id: exp024
+description: "Swap-noise Denoising AutoEncoder features -> MLP (Kaggle tabular booster; blend diversity)"
+model: dae
+dae:
+  swap_rate: 0.15        # Jahrer swap-noise rate
+  hidden: [512, 512, 512]  # hidden activations concatenated -> 1536-d learned representation
+  dae_epochs: 150
+  dae_lr: 3.0e-4
+  mlp_hidden: [256, 128]
+  mlp_epochs: 60
+  mlp_lr: 1.0e-3
+  dropout: 0.1
+  batch_size: 256
+allow_cpu: true          # 10k rows; runs on CPU in a few minutes, GPU faster
+target_transform: none
+sample_weighting: none
+n_seeds: 1
+model_params: {}
+hpo: { trials: 0, timeout: null }
