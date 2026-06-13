@@ -77,18 +77,51 @@ def optimize_weights(oofs: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 
 def ridge_stack(
-    oofs: np.ndarray, y: np.ndarray, tests: np.ndarray, folds: np.ndarray
+    oofs: np.ndarray, y: np.ndarray, tests: np.ndarray, folds: np.ndarray,
+    sample_weight: np.ndarray | None = None,
+    segment: np.ndarray | None = None,
+    test_segment: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Fold-safe Ridge stacker on the OOF matrix."""
+    """Fold-safe Ridge stacker on the OOF matrix.
+
+    sample_weight: per-row weight (e.g. test-year frequency) so the stacker is
+        optimized for the LB's year distribution rather than the uniform train one.
+    segment / test_segment: if given, fit a SEPARATE stacker per segment value
+        (e.g. late-year vs early-year) — the LB is 62% late years, and the optimal
+        member mix differs there.
+    """
     from sklearn.linear_model import Ridge
 
+    def _fit_predict(Xtr, ytr, Xpred, w):
+        return Ridge(alpha=1.0, positive=True, fit_intercept=True).fit(
+            Xtr, ytr, sample_weight=w
+        ).predict(Xpred)
+
+    segs = np.unique(segment) if segment is not None else [None]
     stack_oof = np.zeros(len(y))
-    for fold in range(N_FOLDS):
-        tr, va = folds != fold, folds == fold
-        m = Ridge(alpha=1.0, positive=True, fit_intercept=True).fit(oofs[tr], y[tr])
-        stack_oof[va] = m.predict(oofs[va])
-    m = Ridge(alpha=1.0, positive=True, fit_intercept=True).fit(oofs, y)
-    return clip_preds(stack_oof), clip_preds(m.predict(tests))
+    test_pred = np.zeros(len(tests))
+    for s in segs:
+        tr_seg = np.ones(len(y), bool) if s is None else (segment == s)
+        te_seg = np.ones(len(tests), bool) if s is None else (test_segment == s)
+        for fold in range(N_FOLDS):
+            tr = (folds != fold) & tr_seg
+            va = (folds == fold) & tr_seg
+            w = sample_weight[tr] if sample_weight is not None else None
+            stack_oof[va] = _fit_predict(oofs[tr], y[tr], oofs[va], w)
+        w_all = sample_weight[tr_seg] if sample_weight is not None else None
+        test_pred[te_seg] = _fit_predict(oofs[tr_seg], y[tr_seg], tests[te_seg], w_all)
+    return clip_preds(stack_oof), clip_preds(test_pred)
+
+
+def test_year_weights(train_years: np.ndarray, test_years: np.ndarray) -> np.ndarray:
+    """Per-train-row weight = test/train year frequency ratio, normalized to mean 1.
+
+    Makes the stacker minimize the test set's (late-year-heavy) MSE — the LB proxy.
+    """
+    te = np.bincount(test_years) / len(test_years)
+    tr = np.bincount(train_years, minlength=len(te)) / len(train_years)
+    w = np.where(tr[train_years] > 0, te[train_years] / np.maximum(tr[train_years], 1e-9), 1.0)
+    return w / w.mean()
 
 
 def main() -> None:
@@ -96,6 +129,10 @@ def main() -> None:
     ap.add_argument("-e", "--exp-ids", nargs="+", default=None)
     ap.add_argument("--method", choices=["auto", "ridge", "weights", "equal"], default="auto")
     ap.add_argument("--tag", default="blend", help="output artifact/results name")
+    ap.add_argument("--weight-by-test-year", action="store_true",
+                    help="optimize the stacker for the test's year distribution (LB proxy)")
+    ap.add_argument("--year-conditional", action="store_true",
+                    help="fit separate stackers for late (>=2024) vs early years")
     args = ap.parse_args()
     seed_everything()
 
@@ -104,15 +141,20 @@ def main() -> None:
         sys.exit(f"need >=2 experiments with artifacts, found {exp_ids}")
     log.info(f"blending ({args.method}, tag={args.tag}): {exp_ids}")
 
-    train, _, _ = load_raw()
+    train, test_df, _ = load_raw()
     y = train[TARGET].to_numpy(dtype=float)
     folds = fold_array(train)
     years = train["application_year"].to_numpy()
+    test_years = test_df["application_year"].to_numpy()
 
     oofs = np.column_stack([np.load(ARTIFACTS / f"oof_{e}.npy") for e in exp_ids])
     tests = np.column_stack([np.load(ARTIFACTS / f"test_{e}.npy") for e in exp_ids])
     for e, col in zip(exp_ids, oofs.T):
         log.info(f"  {e}: oof mse={mse(y, col):.4f}")
+
+    sw = test_year_weights(years, test_years) if args.weight_by_test_year else None
+    seg = (years >= 2024).astype(int) if args.year_conditional else None
+    test_seg = (test_years >= 2024).astype(int) if args.year_conditional else None
 
     n = len(exp_ids)
     candidates: dict[str, tuple[np.ndarray, np.ndarray, str]] = {}
@@ -121,8 +163,10 @@ def main() -> None:
         candidates["weights"] = (clip_preds(oofs @ w), clip_preds(tests @ w),
                                  "weights: " + ", ".join(f"{e}={wi:.3f}" for e, wi in zip(exp_ids, w)))
     if args.method in ("auto", "ridge"):
-        s_oof, s_test = ridge_stack(oofs, y, tests, folds)
-        candidates["ridge_stack"] = (s_oof, s_test, "ridge alpha=1.0 positive")
+        s_oof, s_test = ridge_stack(oofs, y, tests, folds, sample_weight=sw,
+                                    segment=seg, test_segment=test_seg)
+        extra = (" +test-year-wt" if sw is not None else "") + (" +year-cond" if seg is not None else "")
+        candidates["ridge_stack"] = (s_oof, s_test, f"ridge alpha=1.0 positive{extra}")
     if args.method == "equal":
         we = np.full(n, 1.0 / n)
         candidates["equal"] = (clip_preds(oofs @ we), clip_preds(tests @ we),

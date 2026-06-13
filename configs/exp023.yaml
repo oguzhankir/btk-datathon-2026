@@ -1,0 +1,23 @@
+exp_id: exp023
+description: "LoRA fine-tune of a large Turkish LLM (capacity bet: does >7B break the 11.5 text floor?)"
+model: llm
+llm:
+  model: ytu-ce-cosmos/Turkish-Llama-8b-v0.1   # swap to Qwen/Qwen2.5-7B if gated/unavailable
+  epochs: 3
+  lr: 1.0e-4            # LoRA adapter lr
+  head_lr: 1.0e-3
+  max_len: 192
+  batch_size: 8
+  grad_accum: 2         # effective batch 16
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  load_in_4bit: true    # fits an 8B model on a single 24GB GPU
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+  inner_val_frac: 0.1
+allow_cpu: false
+target_transform: none
+sample_weighting: none
+n_seeds: 1
+model_params: {}
+hpo: { trials: 0, timeout: null }

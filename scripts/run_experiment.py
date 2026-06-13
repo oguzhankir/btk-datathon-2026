@@ -68,6 +68,10 @@ def main() -> None:
         from src.bert_finetune_v2 import run_bert_v2_experiment
 
         result, n_features, notes = run_bert_v2_experiment(train, test, y, folds, years, cfg, device)
+    elif cfg.get("model") == "llm":
+        from src.llm_finetune import run_llm_experiment
+
+        result, n_features, notes = run_llm_experiment(train, test, y, folds, years, cfg, device)
     else:
         X_tr, X_te, notes = build_features(cfg.get("features", {}), train, test, y, folds)
         n_features = X_tr.shape[1]
