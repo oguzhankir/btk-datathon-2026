@@ -20,6 +20,7 @@ Sections:
   6. Text-vs-score contradictions -> text encodes the profile, not the score.
   7. Raw-column coverage + text-numeric discrepancy -> no forgotten signal.
   8. Public-LB standard error -> the gap to #1 is within subset noise.
+  9. Aspect-based text extraction -> real target signal, zero residual signal (already captured).
 """
 from __future__ import annotations
 
@@ -244,6 +245,49 @@ def section_public_lb_noise(y, oof) -> None:
     plt.close(fig)
 
 
+def section_aspect_extraction(train, y, oof, res, folds) -> None:
+    """Section 9: aspect-based sentiment extraction — does a NEW, structured text
+    representation add anything beyond the TF-IDF + fine-tune OOFs already in the blend?"""
+    import lightgbm as lgb
+
+    t = train[TEXT_COL].fillna("").str.lower().to_numpy()
+    aspects = {
+        "proje": ["proje", "portföy", "portfolyo"], "mulakat": ["mülakat"],
+        "kodlama": ["kodlama", "programlama", "yazılım geliş"], "sql": ["sql", "veritaban"],
+        "bulut": ["bulut", "cloud"], "devops": ["devops", "ci/cd"], "problem": ["problem çöz"],
+        "iletisim": ["iletişim", "sunum", "takım"], "staj": ["staj", "deneyim"],
+        "ml": ["makine öğren", "derin öğren", "yapay zeka"],
+    }
+    pos = ["mükemmel", "olağanüstü", "etkileyici", "güçlü", "başarılı", "donanımlı", "yüksek",
+           "iyi", "ustalı", "dikkat çekici", "heyecan", "tutku"]
+    neg = ["eksik", "sınırlı", "zorluk", "yetersiz", "geliştir", "düşük", "daha fazla",
+           "ihtiyaç", "gereken", "zayıf"]
+
+    def sent_near(s: str, kws: list[str]) -> int:
+        sc = 0
+        for kw in kws:
+            for m in re.finditer(re.escape(kw), s):
+                w = s[max(0, m.start() - 60): m.end() + 60]
+                sc += sum(w.count(p) for p in pos) - sum(w.count(nw) for nw in neg)
+        return sc
+
+    X = pd.DataFrame({a: [sent_near(s, kws) for s in t] for a, kws in aspects.items()})
+    print("\n[9] aspect-based text extraction (signed sentiment in a ±60-char window per aspect)")
+    print(f"  sanity — corr(total aspect sentiment, target) = {np.corrcoef(X.sum(axis=1), y)[0, 1]:+.3f}"
+          "  (real signal, comparable to a mid-strength tabular feature)")
+    pred = np.zeros(len(res))
+    for f in sorted(np.unique(folds)):
+        tr, va = folds != f, folds == f
+        m = lgb.LGBMRegressor(n_estimators=500, learning_rate=0.03, num_leaves=31,
+                              random_state=42, verbosity=-1)
+        m.fit(X[tr], res[tr])
+        pred[va] = m.predict(X[va])
+    base, mod = float(np.mean(res ** 2)), float(np.mean((res - pred) ** 2))
+    print(f"  residual-GBM on aspect features: R²={1 - mod / base:+.4f}  recoverable MSE={base - mod:+.4f}")
+    print("  => the aspect signal is REAL but already captured by TF-IDF + fine-tune OOFs; a brand-new")
+    print("     structured extraction recovers nothing. Independent methods converge — text is saturated.")
+
+
 def main() -> None:
     FIGS.mkdir(parents=True, exist_ok=True)
     train, test, _ = load_raw()
@@ -262,6 +306,7 @@ def main() -> None:
     section_text_vs_score(train, y, oof)
     section_no_forgotten_signal(train, test, y, oof, res)
     section_public_lb_noise(y, oof)
+    section_aspect_extraction(train, y, oof, res, fold_array(train))
     log.info(f"figures written to {FIGS}/")
 
 

@@ -219,3 +219,50 @@ explains the remaining error. What's left = generator noise + the part only the 
 ### exp021 — Text v2 recipe on xlm-roberta-base (same recipe as exp020, different backbone for blend diversity)
 - CV MSE **136.8572** | RMSE 11.6986 (±0.3321) | 2024+ RMSE 12.9155 | y<100 RMSE 11.8442 | 128 features
 - Notes: bert_v2=FacebookAI/xlm-roberta-base; llrd=0.9; msd=5x0.3
+- Decision: the v2 recipe (attention pooling + multi-sample dropout + LLRD + cosine) did NOT beat the
+  v1 recipe — 6 transformers across 2 recipes all land at RMSE ~11.5. This is the text **signal**
+  ceiling, not a recipe problem. Text fine-tuning closed.
+
+## CV ↔ LB final (day 3, submissions 9–13) — 5 blend variants, FLOOR CONFIRMED
+
+All five are at the floor (CV 73.6–74.0) but built from different member sets / combiners, to
+empirically separate signal from public-LB noise and pick the private bet:
+
+| sub (tag) | members | combiner | cv_mse | LB MSE | offset |
+|---|---|---|---|---|---|
+| `blend_full_ridge` | all 21 | ridge stack | **73.61** | **82.96** | +9.35 |
+| `blend_core_ridge` | 5 GBM + MLP | ridge stack | 73.85 | 83.17 | +9.32 |
+| `blend_strong_ridge` | mse<80 + MLP (10) | ridge stack | 73.78 | 83.23 | +9.45 |
+| `blend_strong_wts` | mse<80 + MLP (10) | convex weights | 73.88 | 83.89 | +10.01 |
+| `blend_core_equal` | 5 GBM + MLP | equal weight | 74.02 | 84.13 | +10.11 |
+
+- **CV ranking transferred to LB almost perfectly** (one 0.07-MSE swap). CV is a faithful guide;
+  better combiner (ridge > convex weights > equal) and more members ⇒ lower LB, deterministically.
+- This **refines the day-2 "mostly noise" read**: differences between OUR (correlated) submissions
+  on the same public rows are low-noise and real. So the ~2.25 MSE gap to public #1 (80.71) is
+  **largely a real edge**, not pure luck — the top teams genuinely have ~0.69→~0.71 R² more signal,
+  most plausibly from a text approach our fine-tunes couldn't reach. We do not have it tonight.
+- **Final pick: `blend_full_ridge` (LB 82.96)** — best on both CV and LB; lock it.
+
+## Signal-floor analysis (2026-06-13, reports/eda/floor_analysis.py)
+
+Seven independent diagnostics, all reproducible from saved artifacts (no fitting, leak-free).
+Full narrative in `docs/progress/2026-06-13.md`; figures in `reports/figures/`.
+
+1. **CV→LB offset is 100% the test's late-year skew**: re-weighting OOF MSE by the test year mix
+   gives 83.39 ≈ LB 82.96; per-year bias ≈ 0. No overfit, no leak.
+2. **Within-year R² is flat at ~0.69** (incl. 2025-26): late years are harder only because their
+   target variance is larger — no late-year-specific signal we fail to model.
+3. **Ceiling & dispersion oracles** recover ≈0 / hurt (rescale 102→111) → neither is a lever.
+4. **Blend members 0.95 correlated** → diversity exhausted (blend beats best single by only ~1.5 MSE).
+5. **Text describes the profile, not the score** (top-error rows: glowing text ↔ low score) ⇒
+   `target = g(features) + irreducible noise`; text is a noisier view of the same features.
+6. **No forgotten signal**: every raw column is used; an aspect-based sentiment extraction has real
+   target signal (corr +0.33) but recovers R² = −0.04 on the blend residual — already captured by
+   TF-IDF + fine-tunes. Text-numeric discrepancy vs the columns: corr −0.01 with the residual.
+7. **Gap to public #1 (≈2.25 MSE) sits inside the public-subset SE band (±2-3 MSE)** in absolute
+   terms; relative ordering of similar models is reliable (see day-3 table). → don't overfit the
+   public LB; ship a robust CV-backed blend for the private board.
+
+**Bottom line:** the modelling frontier is closed for the levers we explored. Best submission =
+`blend_full_ridge`, CV 73.61 / LB 82.96, a top-tier, well-calibrated, non-overfit solution.
