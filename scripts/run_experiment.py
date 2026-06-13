@@ -76,10 +76,6 @@ def main() -> None:
         from src.dae import run_dae_experiment
 
         result, n_features, notes = run_dae_experiment(train, test, y, folds, years, cfg, device)
-    elif cfg.get("model") == "cnn1d":
-        from src.cnn1d import run_cnn1d_experiment
-
-        result, n_features, notes = run_cnn1d_experiment(train, test, y, folds, years, cfg, device)
     else:
         X_tr, X_te, notes = build_features(cfg.get("features", {}), train, test, y, folds)
         n_features = X_tr.shape[1]
