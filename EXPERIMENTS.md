@@ -287,3 +287,7 @@ Full narrative in `docs/progress/2026-06-13.md`; figures in `reports/figures/`.
 - `blend_lbopt` (20 members): CV (uniform) **73.50**, LB-proxy 83.17 vs 83.39 for the plain stacker
   → projected LB ≈ 82.74. `blend_llm` (+ exp023): CV **73.45** → projected LB ≈ 82.69 (new best).
 - Decision: submit `blend_llm`; keep `blend_full_ridge` (LB 82.96) as the safe backup.
+
+### exp024 — Swap-noise Denoising AutoEncoder features -> MLP (Kaggle tabular booster; blend diversity)
+- CV MSE **115.3450** | RMSE 10.7399 (±0.3012) | 2024+ RMSE 11.7730 | y<100 RMSE 10.7950 | 1536 features
+- Notes: dae swap=0.15; hidden=[512, 512, 512]; rep=1536
