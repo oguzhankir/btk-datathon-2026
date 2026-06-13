@@ -33,7 +33,7 @@ case "$cmd" in
   setup-gpu) pip install -r requirements.txt torch sentence-transformers transformers sentencepiece protobuf ;;
   folds)     python -c "from src.data import make_folds; print(make_folds()['fold'].value_counts().sort_index())" ;;
   all)       python scripts/run_all.py "$@" ;;
-  blend)     if [ $# -gt 0 ]; then python scripts/blend.py -e "$@"; else python scripts/blend.py; fi ;;
+  blend)     python scripts/blend.py "$@" ;;
   submit)    python scripts/make_submission.py -e "${1:?usage: ./run.sh submit <exp_id|blend>}" ;;
   eda)       python reports/eda/deep_eda.py ;;
   adv)       python scripts/adversarial_validation.py ;;
