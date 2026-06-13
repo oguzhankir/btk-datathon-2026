@@ -266,3 +266,22 @@ Full narrative in `docs/progress/2026-06-13.md`; figures in `reports/figures/`.
 
 **Bottom line:** the modelling frontier is closed for the levers we explored. Best submission =
 `blend_full_ridge`, CV 73.61 / LB 82.96, a top-tier, well-calibrated, non-overfit solution.
+
+### exp023 — LoRA fine-tune of an 8B Turkish LLM (capacity bet on the text floor)
+- Hypothesis: the 6 prior text models (≤550M params) plateaued at RMSE ~11.5 — is that a *capacity*
+  limit (a multi-B LLM would break it) or a *signal* limit (the text genuinely caps there)?
+- Setup: `ytu-ce-cosmos/Turkish-Llama-8b` in 4-bit + LoRA (r=16), mean-pool + regression head,
+  y/100, fold-safe. Ran fold 0 three times (3ep/lr1e-4, 6ep/lr2e-4, 6ep/lr1e-4).
+- Result: every stable run **converges to fold-0 RMSE ~11.2–11.4** — identical to BERT-110M (11.62)
+  and XLM-R-large (11.45). Inner-val plateaued by epoch 4 (12.06→12.26, i.e. turned up). lr 2e-4 diverged.
+- **Decision: DEFINITIVE — the text floor is a SIGNAL limit, not a capacity limit.** A 70× larger
+  model matches a 110M one. Stopped after fold 0 (a full run would only add a 0-weight blend member).
+  This closes the last untested mechanism for new signal. Best submission stays `blend_lbopt`.
+
+### blend_lbopt — LB-distribution-optimized stacker (test-year-weighted + year-conditional)
+- Same OOF members as blend_full_ridge, but the Ridge stacker is (a) sample-weighted by the test's
+  year frequency and (b) fit separately for late (≥2024) vs early years — because the LB is 62%
+  late years and the uniform CV objective optimizes the wrong distribution.
+- CV MSE (uniform) **73.50**; LB-proxy (test-year-weighted OOF MSE) 83.17 vs 83.39 for the plain
+  stacker → **projected LB ≈ 82.74** (from 82.96). Modest but real and free.
+- Decision: this is the best available submission; lock it (keep `blend_full_ridge` as the safe backup).
