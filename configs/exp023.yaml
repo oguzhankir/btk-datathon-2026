@@ -3,8 +3,8 @@ description: "LoRA fine-tune of a large Turkish LLM (capacity bet: does >7B brea
 model: llm
 llm:
   model: ytu-ce-cosmos/Turkish-Llama-8b-v0.1   # swap to Qwen/Qwen2.5-7B if gated/unavailable
-  epochs: 6             # 3 was undertrained: inner-val 28→15→12 still descending at ep2
-  lr: 2.0e-4            # LoRA adapter lr (raised from 1e-4 for faster convergence)
+  epochs: 6             # 3 was undertrained: at lr 1e-4 inner-val 28→15→12 still descending at ep2
+  lr: 1.0e-4            # 2e-4 diverged (14.8→21.6); 1e-4 was monotone-stable, keep it
   head_lr: 1.0e-3
   max_len: 128          # texts are ~33 words; 128 covers them and is ~30% faster than 192
   batch_size: 8
