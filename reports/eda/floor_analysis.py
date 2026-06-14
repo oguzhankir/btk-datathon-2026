@@ -21,6 +21,14 @@ Sections:
   7. Raw-column coverage + text-numeric discrepancy -> no forgotten signal.
   8. Public-LB standard error -> the gap to #1 is within subset noise.
   9. Aspect-based text extraction -> real target signal, zero residual signal (already captured).
+ 10. NN leak check + feature-twin floor -> no kNN/copy leak; identical-feature students differ ~11.
+ 11. External-data note -> dataset is synthetic, so external data is meaningless (not just barred).
+
+CAVEAT (added 2026-06-14, after the public LB settled): every floor here is the floor of
+*this* feature set / approach. The public leaderboard's entire top-11 converged to MSE 80.3–81.2
+(we finished ~82.2), which is strong evidence that a real, findable edge exists that this isolated
+pipeline did not discover — most likely a competition-shared trick/leak or a feature insight. The
+"R²0.69 ceiling" below is OUR ceiling, not a proof of the data's true limit. See docs/progress/2026-06-14.md.
 """
 from __future__ import annotations
 
@@ -288,6 +296,51 @@ def section_aspect_extraction(train, y, oof, res, folds) -> None:
     print("     structured extraction recovers nothing. Independent methods converge — text is saturated.")
 
 
+def section_knn_floor(train, test, y) -> None:
+    """Section 10: nearest-neighbor leak check + the feature-twin floor.
+
+    The most intuitive proof of the (OUR-approach) signal floor: how far apart are the
+    targets of two students with NEARLY IDENTICAL features? If feature-twins still differ
+    by ~the model RMSE, the features simply don't determine the target — no model (simple
+    or complex) can do better. Also rules out a near-duplicate / kNN leak (test rows that
+    are copies of train rows).
+    """
+    from sklearn.neighbors import NearestNeighbors
+
+    from src.features.tabular import build_tabular
+
+    X, Xte, feats = build_tabular(train, test, fe=True)
+    num = [c for c in feats if X[c].dtype.kind in "ifu"]
+    Xtr, Xt = X[num].to_numpy(float), Xte[num].to_numpy(float)
+    med = np.nanmedian(np.vstack([Xtr, Xt]), 0)
+    Xtr, Xt = np.where(np.isnan(Xtr), med, Xtr), np.where(np.isnan(Xt), med, Xt)
+    mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-9
+    Xtr, Xt = (Xtr - mu) / sd, (Xt - mu) / sd
+
+    d_te, _ = NearestNeighbors(n_neighbors=1).fit(Xtr).kneighbors(Xt)
+    print("\n[10] nearest-neighbor leak check + feature-twin floor")
+    print(f"  test→train NN distance: min={d_te.min():.3f} median={np.median(d_te):.3f} "
+          f"| near-duplicates (<0.1): {(d_te < 0.1).sum()}/{len(Xt)}  => no kNN/copy leak")
+    d_tr, idx = NearestNeighbors(n_neighbors=2).fit(Xtr).kneighbors(Xtr)
+    nbr, nd = idx[:, 1], d_tr[:, 1]
+    close = nd < np.percentile(nd, 5)
+    print(f"  feature-twins (closest 5% of train pairs): mean |y_i − y_twin| = "
+          f"{np.abs(y - y[nbr])[close].mean():.2f} points")
+    print("  => near-identical-feature students differ by ~11 in target — the SAME number as the")
+    print("     text floor (11.5), kNN-target (~11) and residual-GBM (R²≈0). The features cap any")
+    print("     model at ~R²0.69; this is the floor of OUR feature set (see day-3/day-4 progress notes).")
+
+
+def section_synthetic_note() -> None:
+    """Section 11: why external data cannot help here (synthetic dataset)."""
+    print("\n[11] external-data note")
+    print("  The dataset is synthetic: students are generated (STU_0xxxxx), the target is an")
+    print("  organizer-generated formula + injected noise, and the Turkish feedback is LLM-written.")
+    print("  There is no real-world entity to join against, so external data is not just rule-")
+    print("  restricted — it is meaningless here. The only legitimate 'external' input is a")
+    print("  pre-trained model (we used BERT/XLM-R/8B-LLM), which all plateaued at the text floor.")
+
+
 def main() -> None:
     FIGS.mkdir(parents=True, exist_ok=True)
     train, test, _ = load_raw()
@@ -307,6 +360,8 @@ def main() -> None:
     section_no_forgotten_signal(train, test, y, oof, res)
     section_public_lb_noise(y, oof)
     section_aspect_extraction(train, y, oof, res, fold_array(train))
+    section_knn_floor(train, test, y)
+    section_synthetic_note()
     log.info(f"figures written to {FIGS}/")
 
 

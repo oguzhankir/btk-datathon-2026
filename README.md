@@ -54,30 +54,31 @@ target_encoding / embeddings {model, svd, knn, raw} / extra_oof_features),
 | exp012 | XLM-RoBERTa-large fine-tune | 131.16 | — |
 | exp013 | kitchen-sink v2: FE + BERT/XLM-R OOFs, Optuna-tuned LGBM | **75.14** | — |
 | exp019 | CatBoost on kitchen-sink v3 (4 text OOFs) | 75.28 | — |
-| **blend (best)** | ridge stacker over 21 OOFs | **73.61** | **82.96** |
+| blend (ridge, uniform objective) | ridge stacker over 21 OOFs | 73.61 | 82.96 |
+| **blend_all (best)** | test-year-weighted + year-conditional stacker | 73.43 | **82.24** |
 
-CV↔LB offset ≈ +9.3–9.8 with ranking fully preserved (full mapping in EXPERIMENTS.md).
-Rejected on evidence: year-reweighting, embedding SVD/kNN features, multi-seed text
-averaging, pseudo-labeling, isotonic/snap-to-100 post-processing. The day-by-day
-narrative (decisions, failures, LB audit trail) lives in `docs/progress/`.
+The single biggest LB gain came not from a model but from **aligning the stacker's objective to the
+metric**: the competition scores test-year-weighted MSE (test = 62% late years), so
+`scripts/blend.py --weight-by-test-year --year-conditional` moved the LB 82.96 → **82.24 (−0.72)**.
+Rejected on evidence: year-reweighting, embedding SVD/kNN features, multi-seed text averaging,
+pseudo-labeling, isotonic/snap-to-100, DAE/1D-CNN diversity (marginal). Day-by-day narrative in `docs/progress/`.
 
 ### Signal-floor analysis (`reports/eda/floor_analysis.py`)
 
-The modelling frontier is closed — proven by 7 independent diagnostics, all reproducible
-from saved artifacts (no fitting, leakage-free). Run `python reports/eda/floor_analysis.py`:
+11 reproducible diagnostics (no fitting, leakage-free) map the floor of **this feature set/approach**.
+Run `python reports/eda/floor_analysis.py`. Highlights:
 
-1. **The CV→LB offset is 100% the test set's late-year skew**, not overfitting: re-weighting
-   the OOF MSE by the test's year mix gives 83.4 ≈ the actual LB. Per-year bias ≈ 0.
-2. **Within-year R² is flat at ~0.69** (incl. 2025-26): late years are harder only because
-   their target *variance* is larger → no hidden late-year signal we fail to model.
-3. **Ceiling & dispersion oracles** recover ~0 / hurt → neither is a lever.
-4. **Blend members are 0.95 correlated** → diversity exhausted (blend beats best single by ~1.5 MSE).
-5. **Text describes the profile, not the score** (highest-error rows: glowing text ↔ low score)
-   → `target = g(features) + irreducible noise`; text is a noisier view of the same features.
-6. **No forgotten signal**: every raw column is used; text-stated numbers vs the columns have
-   −0.01 correlation with the residual.
-7. **The gap to the public #1 (≈2.25 MSE) is inside the public-subset noise band** (±2-3 MSE):
-   the live ranking is largely chance → don't overfit the public LB; submit a robust CV-backed blend.
+1. **CV→LB offset is 100% the test's late-year skew** — re-weighting OOF MSE by the test year mix ≈ LB.
+2. **Within-year R² is flat at ~0.69** — late years are harder only because their target variance is larger.
+3. **Feature-twins differ by ~11 points** — students with near-identical features still differ ~11 in
+   target (= the text floor 11.5, kNN-target ~11, residual-GBM R²≈0). The features cap any model at ~R²0.69.
+4. **Text describes the profile, not the score**; an 8B LLM matches a 110M BERT (signal limit, not capacity).
+5. **No kNN/copy leak; no forgotten column; external data impossible** (synthetic dataset).
+
+> **Caveat (post public-LB, 2026-06-14):** the floor above is *our* floor. The public top-11 converged
+> to MSE 80.3–81.2 (we finished ~82.2), which is strong evidence of a real, findable edge this isolated
+> pipeline missed — most likely a competition-shared trick/leak we never saw by not reading the
+> `Code`/`Discussion` tabs. See `docs/progress/2026-06-14.md` for the honest reckoning.
 
 Figures: `reports/figures/{year_error_decomposition,r2_by_year,blend_member_corr,public_lb_noise}.png`.
 
